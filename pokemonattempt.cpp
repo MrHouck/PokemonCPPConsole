@@ -56,6 +56,7 @@ struct Player
 };
 
 /*
+growth rates (irrelevant at this point )
 Fast = (4n^3)/5
 Medium Fast = n^3
 Medium Slow = (6/5)n^3 - 15n^2 + 100n - 140
@@ -65,29 +66,29 @@ Slow = (5n^3)/4
 
 //FUNCTION PROTOTYPES
 //Most of these can be void, since we want to have global variables for most of this project
-void CalculateMovement(void);
-void interact(char);
-void Dialogue(NPC);
-void createNPCs(void);
-void DrawMap(char [14][70]);
-void ShowMenu(void);
-void MenuUp(void);
-void MenuDown(void);
-void MenuInteract(void);
-void GetMap(void);
-void changeRoom(void);
-void getNextRoom(string &);
-NPC getNpc(void);
+void CalculateMovement(void); //movement calculation
+void interact(char); //interaction
+void Dialogue(NPC); //dialogue system
+void createNPCs(void); //npc creation (in progress)
+void DrawMap(char [14][70]); //draw the current room
+void ShowMenu(void); //show the game menu
+void MenuUp(void); //move up in the menu
+void MenuDown(void); //move down in the menu
+void MenuInteract(void); //interact with the menu
+void GetMap(void); //get the room you are in, so you can draw it
+void changeRoom(void); //change the room
+void getNextRoom(string &); //get the next room
+NPC getNpc(void); //get the npc in the room you are in
 
 //GLOBAL VARIABLES
 bool game = true;
 bool npcClose = false, canMove = true, doDialogue = false, dialogueDone = false, drawMenu = false, menuFirstTime = false, devMode = false;
-bool talkedToOak = false;
+bool talkedToOak = false; //required for moving on
 int x=1, y=1, currentRoomNumber = 0, selectedMenuIndex = 0;
 string currentRoom = "begin";
-string nextRoom = "";
+string nextRoom = ""; 
 string prevRoom = "begin";
-char map[4][14][70]=
+char map[4][14][70]= //all the possible rooms
 {
     {"##########","#o       #","#        #","#    !   #","#        #","#        #","#   __   #","##########"},
     {"##################################################################","#                                 __                             #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#       /-\\                             /-\\                      #","#       |_|                             |_|                      #","#        o                                                       #","#                                                                #","##################################################################"},
@@ -189,9 +190,9 @@ char chooseStarterPokemonMenu[3][4][6][60] =
 //NPC DEFINITION
 NPC mom =
 {
-    "Mom",
-    "begin",
-    {
+    "Mom", //name
+    "begin", //room npc is in
+    { //dialogue
         {
             "--Mom------------------------------------",
             "|  Right. All boys leave home someday.  |",
@@ -205,16 +206,16 @@ NPC mom =
             "-----------------------------------------"
         }
     },
-    2,
-    6,
-    3
+    2, //dialogue lines
+    6, //x pos
+    3 //y pos
 };
 
 NPC profOak =
 {
-    "Prof. Oak",
-    "prof-oak-house",
-    {
+    "Prof. Oak", //name
+    "prof-oak-house", //room location
+    { //dialogue
         {
             "--Prof. Oak------------------------------",
             "| Hello there! Welcome to the world of  |",
@@ -240,9 +241,9 @@ NPC profOak =
             "-----------------------------------------"
         }
     },
-    4,
-    5,
-    10
+    4, //dialogue lines
+    5, //x pos
+    10 //y pos
 };
 
 //NPC trainerLucas
@@ -251,23 +252,23 @@ NPC profOak =
 //}
 int main()
 {
-    PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
-    system("chcp 65001  > nul");
-    Pokemon bulbasaur = {"Bulbasaur", 45, 49, 49, 1, 45, 64, 0};
-    NPC currentNPC;
+    PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC); //https://stackoverflow.com/questions/9961949/playsound-in-c-console-application
+    system("chcp 65001  > nul"); //make system support UTF-8 encoding
+    Pokemon bulbasaur = {"Bulbasaur", 45, 49, 49, 1, 45, 64, 0}; //to be moved, and changed
+    NPC currentNPC; //the current npc in the room
     while(game)
     {
-        GetMap();
-        getNextRoom(nextRoom);
-        system("cls");
-        DrawMap(map[currentRoomNumber]);
+        GetMap(); //getting the room 
+        getNextRoom(nextRoom); //getting the next room
+        system("cls"); //clearing screen to refresh map
+        DrawMap(map[currentRoomNumber]); //drawing the map based on the room
         if(drawMenu)
         {
-            ShowMenu();
+            ShowMenu(); //if the user wants to draw the menu, show the menu
         }
         if(npcClose)
         {
-            cout << "Press Z to interact." << endl;
+            cout << "Press Z to interact." << endl; 
         }
         else{
             if(doDialogue)
@@ -278,9 +279,9 @@ int main()
         }
         if(doDialogue)
         {
-            currentNPC = getNpc();
-            Dialogue(currentNPC);
-            if(devMode)
+            currentNPC = getNpc(); //get the npc in the room
+            Dialogue(currentNPC); //do dialogue with that npc
+            if(devMode) //draw the debug stats if in dev mode
             {
                 cout << endl << "Debug stats" << endl << "----------------------------";
                 cout << endl << "Current Room: " << currentRoom;
@@ -293,7 +294,7 @@ int main()
                 cout << endl << "Coords: (" << x << ','<< y << ')';
             }
         }
-        else if(devMode)
+        else if(devMode) //draw the debug stats if in dev mode
         {
             if(!drawMenu)
             {
@@ -308,8 +309,8 @@ int main()
                 cout << endl << "Coords: (" << x << ','<< y << ')';
             }
         }
-        system("pause>nul");
-        if(GetAsyncKeyState(0x58))
+        system("pause>nul"); //wait for user input
+        if(GetAsyncKeyState(0x58)) //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
         {
             if(!canMove)
             {
@@ -319,7 +320,7 @@ int main()
                 selectedMenuIndex = 0;
             }
             else
-            {
+            { //draw the menu, make it so the user can't move
                 drawMenu = true;
                 menuFirstTime = false;
                 canMove = false;
@@ -327,7 +328,7 @@ int main()
             }
         }
         if(canMove)
-        {
+        { //do movement if allowed
             CalculateMovement();
         }
     }
@@ -335,7 +336,7 @@ int main()
 
 
 void GetMap()
-{
+{ //can't use switch statements with string unfortuantely
     if(currentRoom == "begin")
         currentRoomNumber = 0;
     else if(currentRoom == "outside-begin")
@@ -346,7 +347,7 @@ void GetMap()
         currentRoomNumber = 3;
 }
 void DrawMap(char room[14][70])
-{
+{ //just a for loop to draw the map
     for(int i = 0; i < 14; i++)
     {
         cout << room[i] << endl;
@@ -355,9 +356,10 @@ void DrawMap(char room[14][70])
 
 void ShowMenu()
 {
+    //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
     if(GetAsyncKeyState(VK_UP))
     {
-        mciSendString("play Choose.wav", NULL, 0, NULL);
+        mciSendString("play Choose.wav", NULL, 0, NULL); //https://docs.microsoft.com/en-us/previous-versions/dd757161(v%3Dvs.85)
         MenuUp();
     }
 
@@ -379,12 +381,12 @@ void ShowMenu()
         for(int i = 0; i < 9; i++)
             cout << menu[selectedMenuIndex][i] << endl;
     }
-    Sleep(150);
+    Sleep(150); //if this isn't here everything breaks
 }
 
 void MenuDown()
-{
-    if(selectedMenuIndex+1 > 6)
+{ 
+    if(selectedMenuIndex+1 > 6) //if this isn't here the menu can display weird broken characters because it's accessing indexes that don't exist
         selectedMenuIndex = 0;
     else
         selectedMenuIndex++;
@@ -395,7 +397,7 @@ void MenuDown()
 }
 void MenuUp()
 {
-    if(selectedMenuIndex-1 < 0)
+    if(selectedMenuIndex-1 < 0) //if this isn't here the menu can display weird broken characters because it's accessing indexes that don't exist
         selectedMenuIndex = 6;
     else
         selectedMenuIndex--;
@@ -409,7 +411,7 @@ void MenuInteract()
 {
     int currentSelection = 0;
     bool sequenceFinished = false;
-    switch(selectedMenuIndex)
+    switch(selectedMenuIndex) 
     {
     case 0:
         //POKÉDEX
@@ -424,7 +426,7 @@ void MenuInteract()
         cout << "bag" << endl;
         break;
     case 3:
-        //SAVE
+        //SAVE (have fun dalton)
         drawMenu=false;
         selectedMenuIndex = 0;
         for(int i = 0; i <= 4; i++)
@@ -469,6 +471,7 @@ void MenuInteract()
                 else if(currentSelection == 1)
                 {
                     //save
+                    //DALTON: THIS IS WHERE YOU START THE CODE FOR SAVING
                     cout << "save" << endl;
                     sequenceFinished = true;
                 }
@@ -507,25 +510,25 @@ void changeRoom()
     {
     case 0:
         if(prevRoom == "outside-begin")
-            x=y=5;
+            x=y=5; //starting location
         else
-            x=y=1;
+            x=y=1; //starting location
         break;
     case 1:
         if(prevRoom == "prof-oak-house")
         {
-            x=41;
+            x=41;//starting location
             y=9;
         }
         else
-            x=y=9;
+            x=y=9;//starting location
         break;
     case 2:
-        x=17;
+        x=17;//starting location
         y=7;
         break;
     case 3:
-        x=14;
+        x=14;//starting location
         y=11;
         break;
     default:
@@ -533,7 +536,7 @@ void changeRoom()
     }
     if(currentRoom == "begin")
     {
-        PlaySound(NULL, 0, 0);
+        PlaySound(NULL, 0, 0);//https://docs.microsoft.com/en-us/previous-versions/dd743680(v%3Dvs.85)
         PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
     }
     else if(currentRoom == "outside-begin")
@@ -555,6 +558,7 @@ void changeRoom()
 
 void CalculateMovement()
 {
+    //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
     if(GetAsyncKeyState(VK_UP))
     {
         int y2 = y-1;
@@ -565,7 +569,7 @@ void CalculateMovement()
             map[currentRoomNumber][y][x] = 'o';
         }
         else if(map[currentRoomNumber][y2][x] == '_')
-        {
+        { // _ is the room switcher char
             map[currentRoomNumber][y][x] = ' ';
             prevRoom = currentRoom;
             currentRoom = nextRoom;
@@ -627,11 +631,11 @@ void CalculateMovement()
             changeRoom();
         }
     }
-    if(GetAsyncKeyState(0x44))
+    if(GetAsyncKeyState(0x44)) //D key
         devMode = !devMode;
 
-    if(GetAsyncKeyState(0x5A))
-    {
+    if(GetAsyncKeyState(0x5A)) //z key
+    { //if NPC is nearby OR if the pokeballs in prof oaks lab are nearby
         if(map[currentRoomNumber][y-1][x] == '!' || map[currentRoomNumber][y+1][x] == '!' || map[currentRoomNumber][y][x+1] == '!' || map[currentRoomNumber][y][x-1] == '!')
         {
             if(map[currentRoomNumber][y-1][x] == '@' || map[currentRoomNumber][y+1][x] == '@' || map[currentRoomNumber][y][x+1] == '@' || map[currentRoomNumber][y][x-1] == '@')
@@ -672,51 +676,48 @@ void interact(char interactedCharacter)
     } else if(interactedCharacter == '@')
     {
         if((x==27 && y==2) || (x==28||y==1))
-            Beep(500, 500);
+            Beep(500, 500); //for debugging, it wasn't working
         else if(x==29 && y == 1)
-            Beep(500, 500);
+            Beep(500, 500); //for debugging, it wasn't working
         else if(x==30&&y==1)
-            Beep(500, 500);
+            Beep(500, 500); //for debugging, it wasn't working
     }
 
 }
 
 NPC getNpc()
 {
-    NPC errorNPC = {"error","null",{{"An error has occured."}, 1, 0, 0}};
+    NPC errorNPC = {"error","null",{{"An error has occured."}, 1, 0, 0}}; //error npc (if npc doesn't exist or something else happens)
     if(currentRoom == "begin")
         return mom;
     else if(currentRoom == "prof-oak-house")
         return profOak;
     else
         return errorNPC;
-
+    return errorNPC;
 }
 
 void Dialogue(NPC npc)
 {
     int i = 0;
-    while(!dialogueDone)
+    while(!dialogueDone) //while dialogue is not done
     {
-        if(i > npc.dialogueLines)
+        if(i > npc.dialogueLines) //if i exceeds dialogue lines, dialogue is done
             dialogueDone = true;
-        if(GetAsyncKeyState(0x5A))
+        if(GetAsyncKeyState(0x5A)) //z key
         {
             system("cls");
-            DrawMap(map[currentRoomNumber]);
-            if(npcClose)
-            {
-                cout << "Press Z to interact." << endl;
-            }
+            DrawMap(map[currentRoomNumber]); //redraw map because otherwise only textbox shows up
+            cout << "Press Z to interact." << endl; //we don't have to check npcClose because you're interacting with the npc, it *must* be close
             cout << endl;
-            for(int j = 0; j < 4; j++)
+            for(int j = 0; j < 4; j++) //cout dialogue
                 cout << npc.dialogue[i][j] << endl;
             i++;
         }
         Sleep(150);
     }
     if(npc.name == "Prof. Oak")
-    {
+    { //make sure we are able to leave the start town
         talkedToOak = true;
     }
     doDialogue = false;
@@ -730,9 +731,9 @@ void getNextRoom(string &nextRoom)
     }
     if(currentRoom == "outside-begin")
     {
-        if(x < 15 && x > 5)
+        if(x < 15 && x > 5) //multiple checks because there are 3 different places to enter here
             nextRoom = "begin";
-        else if(x > 30 && x < 45 && y == 9)
+        else if(x > 30 && x < 45 && y == 9) //should probably rename outside-begin to palette town, since that's where you start 
             nextRoom = "prof-oak-house";
         else if(x > 30 && x < 45 && y < 5 && talkedToOak == true)
             nextRoom = "route-328";
