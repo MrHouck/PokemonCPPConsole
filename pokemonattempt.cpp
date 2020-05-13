@@ -30,6 +30,7 @@ struct Pokemon
     int xpRequired;
     int currentXp;
     Moveset moves[4];
+    Weakness weakness;
 };
 
 struct NPC
