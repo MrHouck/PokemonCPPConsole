@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <winuser.h>
 #include <mmsystem.h>
+#include <fstream>
 #pragma comment(lib, "Winmm.lib")
 
 using namespace std;
@@ -57,7 +58,7 @@ struct Player
 };
 
 /*
-growth rates (irrelevant at this point )
+growth rates (in case we decide to use levels)
 Fast = (4n^3)/5
 Medium Fast = n^3
 Medium Slow = (6/5)n^3 - 15n^2 + 100n - 140
@@ -66,28 +67,37 @@ Slow = (5n^3)/4
 
 
 //FUNCTION PROTOTYPES
-//Most of these can be void, since we want to have global variables for most of this project
+//Most of these can be void, since we use global variables for most of this project
 void CalculateMovement(void); //movement calculation
 void interact(char); //interaction
+
+NPC getNpc(void); //get the npc in the room you are in
 void Dialogue(NPC); //dialogue system
 void createNPCs(void); //npc creation (in progress)
+
+void GetMap(void); //get the room you are in, so you can draw it
+void changeRoom(void); //change the room
+void getNextRoom(string &); //get the next room
 void DrawMap(char [14][70]); //draw the current room
+
 void ShowMenu(void); //show the game menu
 void MenuUp(void); //move up in the menu
 void MenuDown(void); //move down in the menu
 void MenuInteract(void); //interact with the menu
-void GetMap(void); //get the room you are in, so you can draw it
-void changeRoom(void); //change the room
-void getNextRoom(string &); //get the next room
-NPC getNpc(void); //get the npc in the room you are in
+
+void PlayMusic(void); //play the music (if enabled)
+void printDebugStats(void); //print debug stats (if enabled)
+
 
 //GLOBAL VARIABLES
+//boolean reference: https://www.geeksforgeeks.org/bool-data-type-in-c/
 bool game = true;
-bool npcClose = false, canMove = true, doDialogue = false, dialogueDone = false, drawMenu = false, menuFirstTime = false, devMode = false;
+bool npcClose = false, canMove = true, doDialogue = false, dialogueDone = false, drawMenu = false, menuFirstTime = false;
+bool devMode = false, soundEnabled = true, musicEnabled = true;
 bool talkedToOak = false; //required for moving on
 int x=1, y=1, currentRoomNumber = 0, selectedMenuIndex = 0;
 string currentRoom = "begin";
-string nextRoom = ""; 
+string nextRoom = "";
 string prevRoom = "begin";
 char map[4][14][70]= //all the possible rooms
 {
@@ -97,15 +107,14 @@ char map[4][14][70]= //all the possible rooms
     {"############################","#                          #","#                        _ #","#                          #","#                          #","#                 ---------#","#                          #","#                        ! #","#---------                 #","#                          #","#                          #","#             o            #","############################"}
 };
 //MENUS
-char menu[7][9][18] =
+char menu[6][8][18] =
 {
-    {"+-----------+","| → Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","|   Options |","|   Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","| → Pokémon |","|   Bag     |","|   Save    |","|   Options |","|   Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","|   Pokémon |","| → Bag     |","|   Save    |","|   Options |","|   Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","| → Save    |","|   Options |","|   Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","| → Options |","|   Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","|   Options |","| → Debug   |","|   Exit    |","+-----------+" },
-    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","|   Options |","|   Debug   |","| → Exit    |","+-----------+" }
+    {"+-----------+","| → Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","|   Options |","|   Exit    |","+-----------+" },
+    {"+-----------+","|   Pokédex |","| → Pokémon |","|   Bag     |","|   Save    |","|   Options |","|   Exit    |","+-----------+" },
+    {"+-----------+","|   Pokédex |","|   Pokémon |","| → Bag     |","|   Save    |","|   Options |","|   Exit    |","+-----------+" },
+    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","| → Save    |","|   Options |","|   Exit    |","+-----------+" },
+    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","| → Options |","|   Exit    |","+-----------+" },
+    {"+-----------+","|   Pokédex |","|   Pokémon |","|   Bag     |","|   Save    |","|   Options |","| → Exit    |","+-----------+" }
 };
 
 char saveMenu[2][5][40] =
@@ -251,15 +260,31 @@ NPC profOak =
 //{
 
 //}
+
+
 int main()
 {
-    PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC); //https://stackoverflow.com/questions/9961949/playsound-in-c-console-application
+    ifstream loadFile;
+    loadFile.open("saveData.txt");
+
+    loadFile >> musicEnabled;
+    loadFile >> soundEnabled;
+    loadFile >> devMode;
+    loadFile >> talkedToOak;
+    loadFile >> x;
+    loadFile >> y;
+    loadFile >> currentRoom;
+    loadFile >> nextRoom;
+    loadFile >> prevRoom;
+
+    if(musicEnabled)
+        PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC); //https://stackoverflow.com/questions/9961949/playsound-in-c-console-application
     system("chcp 65001  > nul"); //make system support UTF-8 encoding
     Pokemon bulbasaur = {"Bulbasaur", 45, 49, 49, 1, 45, 64, 0}; //to be moved, and changed
     NPC currentNPC; //the current npc in the room
     while(game)
     {
-        GetMap(); //getting the room 
+        GetMap(); //getting the room
         getNextRoom(nextRoom); //getting the next room
         system("cls"); //clearing screen to refresh map
         DrawMap(map[currentRoomNumber]); //drawing the map based on the room
@@ -269,7 +294,7 @@ int main()
         }
         if(npcClose)
         {
-            cout << "Press Z to interact." << endl; 
+            cout << "Press Z to interact." << endl;
         }
         else{
             if(doDialogue)
@@ -284,30 +309,14 @@ int main()
             Dialogue(currentNPC); //do dialogue with that npc
             if(devMode) //draw the debug stats if in dev mode
             {
-                cout << endl << "Debug stats" << endl << "----------------------------";
-                cout << endl << "Current Room: " << currentRoom;
-                cout << endl << "Room Number: " << currentRoomNumber;
-                cout << endl << "Previous room: " << prevRoom;
-                cout << endl << "Next room: " << nextRoom;
-                cout << endl << "NPC Close: " << npcClose;
-                cout << endl << "Talked to Prof. Oak: " << talkedToOak;
-                cout << endl << "Draw Menu: " << drawMenu;
-                cout << endl << "Coords: (" << x << ','<< y << ')';
+                printDebugStats();
             }
         }
         else if(devMode) //draw the debug stats if in dev mode
         {
             if(!drawMenu)
             {
-                cout << endl << "Debug stats" << endl << "----------------------------";
-                cout << endl << "Current Room: " << currentRoom;
-                cout << endl << "Room Number: " << currentRoomNumber;
-                cout << endl << "Previous room: " << prevRoom;
-                cout << endl << "Next room: " << nextRoom;
-                cout << endl << "NPC Close: " << npcClose;
-                cout << endl << "Talked to Prof. Oak: " << talkedToOak;
-                cout << endl << "Draw Menu: " << drawMenu;
-                cout << endl << "Coords: (" << x << ','<< y << ')';
+                printDebugStats();
             }
         }
         system("pause>nul"); //wait for user input
@@ -335,6 +344,20 @@ int main()
     }
 }
 
+void printDebugStats()
+{
+    cout << endl << "Debug stats" << endl << "----------------------------";
+    cout << endl << "Room: " << endl << "  Current Room: " << currentRoom;
+    cout << endl << "  Room Number: " << currentRoomNumber;
+    cout << endl << "  Previous room: " << prevRoom;
+    cout << endl << "  Next room: " << nextRoom;
+    cout << endl << "  Draw Menu: " << drawMenu;
+    cout << endl << "  Coords: (" << x << ','<< y << ')';
+    cout << endl << "Options: ";
+    cout << endl << "  Music Enabled: " << musicEnabled;
+    cout << endl << "  Sound Effects Enabled: " << soundEnabled;
+}
+
 
 void GetMap()
 { //can't use switch statements with string unfortuantely
@@ -360,38 +383,41 @@ void ShowMenu()
     //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
     if(GetAsyncKeyState(VK_UP))
     {
-        mciSendString("play Choose.wav", NULL, 0, NULL); //https://docs.microsoft.com/en-us/previous-versions/dd757161(v%3Dvs.85)
+        if(soundEnabled)
+            mciSendString("play Choose.wav", NULL, 0, NULL); //https://docs.microsoft.com/en-us/previous-versions/dd757161(v%3Dvs.85)
         MenuUp();
     }
 
     else if(GetAsyncKeyState(VK_DOWN))
     {
-        mciSendString("play Choose.wav", NULL, 0, NULL);
+        if(soundEnabled)
+            mciSendString("play Choose.wav", NULL, 0, NULL);
 
         MenuDown();
     }
 
     else if(GetAsyncKeyState(0x5A))
     {
-        mciSendString("play Select.wav", NULL, 0, NULL);
+        if(soundEnabled)
+            mciSendString("play Select.wav", NULL, 0, NULL);
 
         MenuInteract();
     }
     else
     {
-        for(int i = 0; i < 9; i++)
+        for(int i = 0; i < 8; i++)
             cout << menu[selectedMenuIndex][i] << endl;
     }
     Sleep(150); //if this isn't here everything breaks
 }
 
 void MenuDown()
-{ 
-    if(selectedMenuIndex+1 > 6) //if this isn't here the menu can display weird broken characters because it's accessing indexes that don't exist
+{
+    if(selectedMenuIndex+1 > 5) //if this isn't here the menu can display weird broken characters because it's accessing indexes that don't exist
         selectedMenuIndex = 0;
     else
         selectedMenuIndex++;
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 8; i++)
     {
         cout << menu[selectedMenuIndex][i] << endl;
     }
@@ -399,10 +425,10 @@ void MenuDown()
 void MenuUp()
 {
     if(selectedMenuIndex-1 < 0) //if this isn't here the menu can display weird broken characters because it's accessing indexes that don't exist
-        selectedMenuIndex = 6;
+        selectedMenuIndex = 5;
     else
         selectedMenuIndex--;
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 8; i++)
     {
         cout << menu[selectedMenuIndex][i] << endl;
     }
@@ -412,7 +438,7 @@ void MenuInteract()
 {
     int currentSelection = 0;
     bool sequenceFinished = false;
-    switch(selectedMenuIndex) 
+    switch(selectedMenuIndex)
     {
     case 0:
         //POKÉDEX
@@ -427,7 +453,6 @@ void MenuInteract()
         cout << "bag" << endl;
         break;
     case 3:
-        //SAVE (have fun dalton)
         drawMenu=false;
         selectedMenuIndex = 0;
         for(int i = 0; i <= 4; i++)
@@ -438,7 +463,9 @@ void MenuInteract()
             DrawMap(map[currentRoomNumber]);
             if(GetAsyncKeyState(VK_UP))
             {
-                Beep(2500, 15);
+                if(soundEnabled)
+                    mciSendString("play Choose.wav", NULL, 0, NULL);
+
 
                 if(currentSelection == 0)
                     currentSelection = 1;
@@ -451,7 +478,9 @@ void MenuInteract()
             }
             else if(GetAsyncKeyState(VK_DOWN))
             {
-                Beep(2500, 15);
+                if(soundEnabled)
+                    mciSendString("play Choose.wav", NULL, 0, NULL);
+
 
                 if(currentSelection == 1)
                     currentSelection = 0;
@@ -464,16 +493,14 @@ void MenuInteract()
             }
             else if(GetAsyncKeyState(0x5A))
             {
-                Beep(2500, 15);
-
-                if(currentSelection == 0)
-                    //don't save
-                    cout << "don't save" << endl;
-                else if(currentSelection == 1)
+                if(soundEnabled)
+                    mciSendString("play Select.wav", NULL, 0, NULL);
+                if(currentSelection == 1)
                 {
-                    //save
-                    //DALTON: THIS IS WHERE YOU START THE CODE FOR SAVING
-                    cout << "save" << endl;
+                    ofstream write;
+                    write.open("saveData.txt");
+                    write << musicEnabled << endl << soundEnabled << endl << devMode << endl << talkedToOak << endl << x << endl << y << endl << currentRoom << endl << nextRoom << endl << prevRoom;
+                    cout << "Your data was successfully saved, it is now safe to exit." << endl;
                     sequenceFinished = true;
                 }
                 else
@@ -489,13 +516,116 @@ void MenuInteract()
         break;
     case 4:
         //OPTIONS
-        cout << "options" << endl;
+        Sleep(150); //otherwise the music instantly gets turned off which we don't want
+        selectedMenuIndex = 0;
+        while(!sequenceFinished)
+        {
+            system("cls");
+            DrawMap(map[currentRoomNumber]);
+            string musicEnabledStr;
+            string soundEnabledStr;
+            string debugModeStr;
+            if(devMode)
+                debugModeStr = "ON ";
+            else
+                debugModeStr = "OFF";
+
+            if(soundEnabled)
+                soundEnabledStr = "ON ";
+            else
+                soundEnabledStr = "OFF";
+
+            if(musicEnabled)
+                musicEnabledStr = "ON ";
+            else
+                musicEnabledStr = "OFF";
+
+            switch(selectedMenuIndex)
+            {
+            case 0:
+                cout << "+---------------------------------+" << endl
+                     << "|  → Music: " << musicEnabledStr << "                   |" << endl
+                     << "|    Sound Effects: " << soundEnabledStr << "           |" << endl
+                     << "|    Debug Mode: " << debugModeStr <<  "              |" << endl
+                     << "|    Exit                         |" << endl
+                     << "+---------------------------------+" << endl;
+                break;
+            case 1:
+                cout << "+---------------------------------+" << endl
+                     << "|    Music: " << musicEnabledStr << "                   |" << endl
+                     << "|  → Sound Effects: " << soundEnabledStr << "           |" << endl
+                     << "|    Debug Mode: " << debugModeStr <<  "              |" << endl
+                     << "|    Exit                         |" << endl
+                     << "+---------------------------------+" << endl;
+                break;
+            case 2:
+                cout << "+---------------------------------+" << endl
+                     << "|    Music: " << musicEnabledStr << "                   |" << endl
+                     << "|    Sound Effects: " << soundEnabledStr << "           |" << endl
+                     << "|  → Debug Mode: " << debugModeStr <<  "              |" << endl
+                     << "|    Exit                         |" << endl
+                     << "+---------------------------------+" << endl;
+                break;
+            case 3:
+                cout << "+---------------------------------+" << endl
+                     << "|    Music: " << musicEnabledStr << "                   |" << endl
+                     << "|    Sound Effects: " << soundEnabledStr << "           |" << endl
+                     << "|    Debug Mode: " << debugModeStr <<  "              |" << endl
+                     << "|  → Exit                         |" << endl
+                     << "+---------------------------------+" << endl;
+                break;
+            }
+
+            if(GetAsyncKeyState(VK_UP))
+            {
+                if(selectedMenuIndex <= 0)
+                    selectedMenuIndex = 3;
+                else
+                    selectedMenuIndex--;
+                if(soundEnabled)
+                    mciSendString("play Choose.wav", NULL, 0, NULL);
+            }
+            else if(GetAsyncKeyState(VK_DOWN))
+            {
+                if(selectedMenuIndex >= 3)
+                    selectedMenuIndex = 0;
+                else
+                    selectedMenuIndex++;
+                if(soundEnabled)
+                    mciSendString("play Choose.wav", NULL, 0, NULL);
+            }
+            else if(GetAsyncKeyState(0x5A))
+            {
+                switch(selectedMenuIndex)
+                {
+                    case 0:
+                        musicEnabled = !musicEnabled;
+                        if(musicEnabled)
+                            PlayMusic();
+                        else
+                            PlaySound(NULL, 0, 0);
+                        break;
+                    case 1:
+                        soundEnabled = !soundEnabled;
+                        break;
+                    case 2:
+                        devMode = !devMode;
+                        break;
+                    case 3:
+                        sequenceFinished = true;
+                        system("cls");
+                        DrawMap(map[currentRoomNumber]);
+                        break;
+                }
+                if(soundEnabled)
+                    mciSendString("play Select.wav", NULL, 0, NULL);
+            }
+            if(devMode)
+                printDebugStats();
+            Sleep(150);
+        }
         break;
     case 5:
-        //DEBUG
-        devMode = !devMode;
-        break;
-    case 6:
         //EXIT
         exit(0); //same as return 0, but we can't do that since we are in a void function
         break;
@@ -505,6 +635,8 @@ void MenuInteract()
     canMove = true;
 
 }
+
+
 void changeRoom()
 {
     switch(currentRoomNumber)
@@ -535,27 +667,39 @@ void changeRoom()
     default:
         break;
     }
-    if(currentRoom == "begin")
+    if(musicEnabled)
+        PlayMusic();
+}
+
+void PlayMusic(void)
+{
+    if(musicEnabled) //double check
     {
-        PlaySound(NULL, 0, 0);//https://docs.microsoft.com/en-us/previous-versions/dd743680(v%3Dvs.85)
-        PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
-    }
-    else if(currentRoom == "outside-begin")
-    {
-        PlaySound(NULL, 0,0);
-        PlaySound("palette-town.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
-    }
-    else if(currentRoom == "prof-oak-house")
-    {
-        PlaySound(NULL, 0,0);
-        PlaySound("oak-house.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
-    }
-    else if(currentRoom == "route-328")
-    {
-        PlaySound(NULL, 0, 0);
-        PlaySound("road-from-palette.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
+        if(currentRoom == "begin")
+        {
+            PlaySound(NULL, 0, 0);//https://docs.microsoft.com/en-us/previous-versions/dd743680(v%3Dvs.85)
+            PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
+        }
+        else if(currentRoom == "outside-begin")
+        {
+            PlaySound(NULL, 0,0);
+            PlaySound("palette-town.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
+        }
+        else if(currentRoom == "prof-oak-house")
+        {
+            PlaySound(NULL, 0,0);
+            PlaySound("oak-house.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
+        }
+        else if(currentRoom == "route-328")
+        {
+            PlaySound(NULL, 0, 0);
+            PlaySound("road-from-palette.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC);
+        }
     }
 }
+
+
+
 
 void CalculateMovement()
 {
@@ -632,8 +776,6 @@ void CalculateMovement()
             changeRoom();
         }
     }
-    if(GetAsyncKeyState(0x44)) //D key
-        devMode = !devMode;
 
     if(GetAsyncKeyState(0x5A)) //z key
     { //if NPC is nearby OR if the pokeballs in prof oaks lab are nearby
@@ -734,7 +876,7 @@ void getNextRoom(string &nextRoom)
     {
         if(x < 15 && x > 5) //multiple checks because there are 3 different places to enter here
             nextRoom = "begin";
-        else if(x > 30 && x < 45 && y == 9) //should probably rename outside-begin to palette town, since that's where you start 
+        else if(x > 30 && x < 45 && y == 9) //should probably rename outside-begin to palette town, since that's where you start
             nextRoom = "prof-oak-house";
         else if(x > 30 && x < 45 && y < 5 && talkedToOak == true)
             nextRoom = "route-328";
