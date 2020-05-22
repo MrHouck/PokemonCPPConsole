@@ -101,10 +101,10 @@ string nextRoom = "";
 string prevRoom = "begin";
 char map[4][14][70]= //all the possible rooms
 {
-    {"##########","#o       #","#        #","#    !   #","#        #","#        #","#   __   #","##########"},
-    {"##################################################################","#                                 __                             #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#       /-\\                             /-\\                      #","#       |_|                             |_|                      #","#        o                                                       #","#                                                                #","##################################################################"},
-    {"####################################","#                                  #","#                           @@@    #","#                !          ┬─┬    #","#                                  #","###########              ###########","#                                  #","#                o                 #","#               ___                #","####################################"},
-    {"############################","#                          #","#                        _ #","#                          #","#                          #","#                 ---------#","#                          #","#                        ! #","#---------                 #","#                          #","#                          #","#             o            #","############################"}
+    {"##########","#        #","#        #","#    !   #","#        #","#        #","#   __   #","##########"},
+    {"##################################################################","#                                 __                             #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#                                                                #","#       /-\\                             /-\\                      #","#       |_|                             |_|                      #","#                                                                #","#                                                                #","##################################################################"},
+    {"####################################","#                                  #","#                           @@@    #","#                !          ┬─┬    #","#                                  #","###########              ###########","#                                  #","#                                  #","#               ___                #","####################################"},
+    {"############################","#                          #","#                        _ #","#                          #","#                          #","#                 ---------#","#                          #","#                        ! #","#---------                 #","#                          #","#                          #","#                          #","############################"}
 };
 //MENUS
 char menu[6][8][18] =
@@ -277,6 +277,8 @@ int main()
     loadFile >> nextRoom;
     loadFile >> prevRoom;
 
+    map[currentRoomNumber][y][x] = 'o';
+
     if(musicEnabled)
         PlaySound("mom-theme.wav", NULL, SND_FILENAME|SND_LOOP|SND_ASYNC); //https://stackoverflow.com/questions/9961949/playsound-in-c-console-application
     system("chcp 65001  > nul"); //make system support UTF-8 encoding
@@ -372,6 +374,7 @@ void GetMap()
 }
 void DrawMap(char room[14][70])
 { //just a for loop to draw the map
+    map[currentRoomNumber][y][x] = 'o';
     for(int i = 0; i < 14; i++)
     {
         cout << room[i] << endl;
@@ -643,26 +646,38 @@ void changeRoom()
     {
     case 0:
         if(prevRoom == "outside-begin")
+        {
             x=y=5; //starting location
+            map[currentRoomNumber][y][x] = 'o';
+        }
         else
+        {
             x=y=1; //starting location
+            map[currentRoomNumber][y][x] = 'o';
+        }
         break;
     case 1:
         if(prevRoom == "prof-oak-house")
         {
             x=41;//starting location
             y=9;
+            map[currentRoomNumber][y][x] = 'o';
         }
         else
+        {
             x=y=9;//starting location
+            map[currentRoomNumber][y][x] = 'o';
+        }
         break;
     case 2:
         x=17;//starting location
         y=7;
+        map[currentRoomNumber][y][x] = 'o';
         break;
     case 3:
         x=14;//starting location
         y=11;
+        map[currentRoomNumber][y][x] = 'o';
         break;
     default:
         break;
